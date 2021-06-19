@@ -30,6 +30,19 @@ func main() {
 		}
 		for _, tp := range docpkg.Types {
 			fmt.Println(pkg.Name, "type", tp.Name)
+
+			for _, cn := range tp.Consts {
+				fmt.Println(pkg.Name, "const", tp.Name, cn.Names, cn.Decl)
+			}
+			for _, vr := range tp.Vars {
+				fmt.Println(pkg.Name, "var", tp.Name, vr.Names, vr.Decl)
+			}
+			for _, fn := range tp.Funcs {
+				fmt.Println(pkg.Name, "func", tp.Name, fn.Name, fn.Decl)
+			}
+			for _, mt := range tp.Methods {
+				fmt.Println(pkg.Name, "method", tp.Name, mt.Name, mt.Decl)
+			}
 		}
 		for _, fn := range docpkg.Funcs {
 			fmt.Println(pkg.Name, "func", fn.Name, fn.Decl)
