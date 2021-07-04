@@ -14,7 +14,7 @@ func ExampleEmpty() {
 		panic(err)
 	}
 
-	display(docpkg)
+	display(docpkg, fset)
 	// Output:
 }
 
@@ -35,7 +35,7 @@ func F() {}
 		panic(err)
 	}
 
-	display(docpkg)
+	display(docpkg, fset)
 	// Output:
 	// trivial func F()
 }
@@ -62,7 +62,32 @@ func Fib(n int32) int32 {
 		panic(err)
 	}
 
-	display(docpkg)
+	display(docpkg, fset)
 	// Output:
 	// fibonacci func Fib(n int32) int32
+}
+
+func ExampleInterface() {
+	src := `
+package fuzzer
+
+type Fuzzer interface {
+	Fuzz(int, []int, map[string]int, struct{}, interface{}) interface{}
+}
+`
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "fuzzer.go", src, parser.ParseComments)
+	if err != nil {
+		panic(err)
+	}
+
+	docpkg, err := doc.NewFromFiles(fset, []*ast.File{file}, "fib")
+	if err != nil {
+		panic(err)
+	}
+
+	display(docpkg, fset)
+	// Output:
+	// fuzzer type Fuzzer interface
+	// fuzzer func Fuzzer.Fuzz(int, []int, map[string]int, struct{}, interface{}) interface{}
 }

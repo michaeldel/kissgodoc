@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/doc"
-	"reflect"
+	"go/printer"
+	"go/token"
+	"log"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
 
-func display(pkg *doc.Package) {
+func display(pkg *doc.Package, fset *token.FileSet) {
 	for _, cn := range pkg.Consts {
 		fmt.Println(pkg.Name, "const", cn.Names, cn.Decl)
 	}
@@ -17,10 +21,17 @@ func display(pkg *doc.Package) {
 		fmt.Println(pkg.Name, "var", vr.Names, vr.Decl)
 	}
 	for _, tp := range pkg.Types {
-		fmt.Println(pkg.Name, "type", tp.Name)
-		fmt.Println(
-			pkg.Name, "type", reflect.TypeOf(tp.Decl.Specs[0].(*ast.TypeSpec).Type),
-		)
+
+		var kind string
+
+		switch tp.Decl.Specs[0].(*ast.TypeSpec).Type.(type) {
+		case *ast.InterfaceType:
+			kind = "interface"
+		default:
+			log.Fatal("not implemented")
+		}
+
+		fmt.Println(pkg.Name, "type", tp.Name, kind)
 
 		for _, cn := range tp.Consts {
 			fmt.Println(pkg.Name, "const", tp.Name, cn.Names, cn.Decl)
@@ -33,6 +44,40 @@ func display(pkg *doc.Package) {
 		}
 		for _, mt := range tp.Methods {
 			fmt.Println(pkg.Name, "method", tp.Name, mt.Name, mt.Decl)
+		}
+
+		// interface methods
+		for _, mt := range tp.Decl.Specs[0].(*ast.TypeSpec).Type.(*ast.InterfaceType).Methods.List {
+			var params []string
+			for _, param := range mt.Type.(*ast.FuncType).Params.List {
+				var buf bytes.Buffer
+				printer.Fprint(&buf, fset, param.Type)
+				params = append(params, buf.String())
+			}
+
+			var results []string
+			for _, result := range mt.Type.(*ast.FuncType).Results.List {
+				var buf bytes.Buffer
+				printer.Fprint(&buf, fset, result.Type)
+				results = append(results, buf.String())
+			}
+
+			var returnType string
+			switch len(results) {
+			case 0:
+				returnType = ""
+			case 1:
+				returnType = results[0]
+			default:
+				returnType = fmt.Sprintf("(%s)", strings.Join(results, ", "))
+			}
+
+			if len(mt.Names) > 1 {
+				log.Fatal("interface methods has multiple names")
+			}
+			fullName := fmt.Sprintf("%s.%s", tp.Name, mt.Names[0])
+			signature := fmt.Sprintf("%s(%s) %s", fullName, strings.Join(params, ", "), returnType)
+			fmt.Println(pkg.Name, "func", signature)
 		}
 	}
 	for _, fn := range pkg.Funcs {
@@ -79,6 +124,6 @@ func main() {
 		if err != nil {
 			continue // TODO: is it right ?
 		}
-		display(docpkg)
+		display(docpkg, pkg.Fset)
 	}
 }
